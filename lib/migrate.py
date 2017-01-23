@@ -22,10 +22,13 @@ def bootstrap(project_identifier):
 cn = init()
 
 FUNC = 0
+TYPE = 0
 TABLE = 1
 COLUMN = 1
+POLYMORPH = 2
+MODEL = 3
 
-def fetch(table, data, o2m={}, m2o={}, stub=[]):
+def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[]):
     dst = orm.findone(cn['dst'], table, {'id': data['id']})
     if dst: return dst
     dst = dict(data)
@@ -33,13 +36,22 @@ def fetch(table, data, o2m={}, m2o={}, stub=[]):
         dst.pop(s, None)
     orm.insert(cn['dst'], table, dst)
     for column, scheme in m2o.items():
-        if data[column]:
-            scheme[FUNC](orm.findone(
-                cn['src'], scheme[TABLE], {'id': dst[column]}
-            ))
+        if not data[column]:
+            continue
+        scheme[FUNC](orm.findone(
+            cn['src'], scheme[TABLE], {'id': dst[column]}
+        ))
     for _table, scheme in o2m.items():
-        for p in orm.find(cn['src'], _table, {scheme[COLUMN]: dst['id']}):
+        filters = {scheme[COLUMN]: dst['id']}
+        if len(scheme) == 4:
+            filters[scheme[POLYMORPH]] = scheme[MODEL]
+        for p in orm.find(cn['src'], _table, filters):
             scheme[FUNC](p)
+    for poly_id_field, scheme in polymorphic.items():
+        _scheme = scheme[COLUMN][data[scheme[TYPE]]]
+        _scheme[FUNC](orm.findone(
+            cn['src'], _scheme[TABLE], {'id': dst[poly_id_field]}
+        ))
     return dst
 
 ##################################################
@@ -64,7 +76,12 @@ def issue(src):
                 'reminder_notification',
                 'position',
            ],
-           o2m={'issues': [issue, 'parent_id']},
+           o2m={
+               'issues': [issue, 'parent_id'],
+               'journals': [
+                   journal, 'journalized_id', 'journalized_type', 'Issue',
+               ]
+           },
            m2o={
                'tracker_id': [tracker, 'trackers'],
                'project_id': [project, 'projects'],
@@ -166,7 +183,9 @@ def wiki_content(src):
               'author_id': [user, 'users'],
            },
            o2m={
-              'wiki_content_versions': [wiki_content_version, 'wiki_content_id'],
+              'wiki_content_versions': [
+                  wiki_content_version, 'wiki_content_id'
+              ],
            },
     )
 
@@ -184,4 +203,28 @@ def wiki_content_version(src):
               'page_id': [wiki_page, 'wiki_pages'],
               'author_id': [user, 'users'],
            }
+    )
+
+def journal(src):
+    return fetch('journals', src, stub=[],
+           polymorphic={
+               'journalized_id': ['journalized_type', {
+                   'Issue': [issue, 'issues']
+               }]
+           },
+           m2o={
+               'user_id': [user, 'users']
+           },
+           o2m={
+              'journal_details': [
+                  journal_detail, 'journal_id'
+              ],
+           },
+    )
+
+def journal_detail(src):
+    return fetch('journal_details', src,
+           m2o={
+               'journal_id': [journal, 'journals']
+           },
     )
