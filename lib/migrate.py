@@ -112,7 +112,11 @@ def issue_status(src):
     return fetch('issue_statuses', src)
 
 def user(src):
-    return fetch('users', src, stub=['reminder_notification'])
+    return fetch('users', src, stub=['reminder_notification'],
+           m2o={
+              'auth_source_id': [auth_source, 'auth_sources'],
+           },
+    )
 
 def issue_priority(src):
     return fetch('enumerations', src,
@@ -228,3 +232,7 @@ def journal_detail(src):
                'journal_id': [journal, 'journals']
            },
     )
+    
+
+def auth_source(src):
+    return fetch('auth_sources', src)
