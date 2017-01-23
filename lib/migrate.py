@@ -48,11 +48,18 @@ def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
             cn['src'], scheme[TABLE], {'id': dst[column]}
         ))
     for _table, scheme in o2m.items():
-        filters = {scheme[COLUMN]: dst['id']}
-        if len(scheme) == 4:
-            filters[scheme[POLYMORPH]] = scheme[MODEL]
-        for p in orm.find(cn['src'], _table, filters):
-            scheme[FUNC](p)
+        if _table[:1] == '_':
+            __table = _table[1:]
+            for _scheme in scheme:
+                filters = {_scheme[COLUMN]: dst['id']}
+                for p in orm.find(cn['src'], __table, filters):
+                    _scheme[FUNC](p)
+        else:
+            filters = {scheme[COLUMN]: dst['id']}
+            if len(scheme) == 4:
+                filters[scheme[POLYMORPH]] = scheme[MODEL]
+            for p in orm.find(cn['src'], _table, filters):
+                scheme[FUNC](p)
     for poly_id_field, scheme in polymorphic.items():
         _scheme = scheme[COLUMN][data[scheme[TYPE]]]
         _scheme[FUNC](orm.findone(
@@ -110,6 +117,10 @@ def issue(src):
            ],
            o2m={
                'issues': [issue, 'parent_id'],
+               '_issue_relations': [
+                   [issue_relation, 'issue_from_id'],
+                   [issue_relation, 'issue_to_id'],
+               ],
                'journals': [
                    journal, 'journalized_id', 'journalized_type', 'Issue',
                ],
@@ -483,5 +494,13 @@ def workflow(src):
                'old_status_id': [issue_status, 'issue_statuses'],
                'new_status_id': [issue_status, 'issue_statuses'],
                'role_id': [role, 'roles'],
+           },
+    )
+
+def issue_relation(src):
+    return fetch('issue_relations', src,
+           m2o={
+               'issue_from_id': [issue, 'issues'],
+               'issue_to_id': [issue, 'issues'],
            },
     )
