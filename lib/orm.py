@@ -2,6 +2,8 @@ from .config import config
 import pymysql as mysql
 import psycopg2 as postgresql
 import psycopg2.extras as postgresql_extras
+import sys
+from psycopg2 import ProgrammingError
 from datetime import *
 
 # redneck drivers because I have no time
@@ -48,7 +50,11 @@ def fetchone(conn, query, params=[]):
         cur = conn[CONN].cursor(cursor_factory=postgresql_extras.DictCursor)
     if conn[TYPE] == 'mysql':
         cur = conn[CONN].cursor(mysql.cursors.DictCursor)
-    cur.execute(query, params)
+    try:
+        cur.execute(query, params)
+    except ProgrammingError as e:
+        print("incorrectly formulated model definition :\n{0}".format(e))
+        sys.exit(1)
     line = cur.fetchone()
     line = dict(line) if line else None
     cur.close()

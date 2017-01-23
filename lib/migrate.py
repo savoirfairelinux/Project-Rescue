@@ -50,6 +50,7 @@ def project(src):
                'issues': [issue, 'project_id'],
                'enabled_modules': [enabled_module, 'project_id'],
                'time_entries': [time_entry, 'project_id'],
+               'wikis': [wiki, 'project_id'],
            },
            m2o={'parent_id': [project, 'projects']},
     )
@@ -135,4 +136,52 @@ def time_entry(src):
                'issue_id': [issue, 'issues'],
                'activity_id': [activity, 'enumerations'],
            },
+    )
+
+def wiki(src):
+    return fetch('wikis', src,
+           m2o={
+              'project_id': [project, 'projects'],
+           },
+           o2m={'wiki_pages': [wiki_page, 'wiki_id'],
+                'wiki_redirects': [wiki_redirect, 'wiki_id']},
+    )
+
+def wiki_page(src):
+    return fetch('wiki_pages', src,
+           m2o={
+              'wiki_id': [wiki, 'wikis'],
+              'parent_id': [wiki_page, 'wiki_pages'],
+           },
+           o2m={
+              'wiki_pages': [wiki_page, 'parent_id'],
+              'wiki_contents': [wiki_content, 'page_id'],
+           },
+    )
+
+def wiki_content(src):
+    return fetch('wiki_contents', src,
+           m2o={
+              'page_id': [wiki_page, 'wiki_pages'],
+              'author_id': [user, 'users'],
+           },
+           o2m={
+              'wiki_content_versions': [wiki_content_version, 'wiki_content_id'],
+           },
+    )
+
+def wiki_redirect(src):
+    return fetch('wiki_redirects', src,
+           m2o={
+              'wiki_id': [wiki, 'wikis'],
+           }
+    )
+
+def wiki_content_version(src):
+    return fetch('wiki_content_versions', src,
+           m2o={
+              'wiki_content_id': [wiki_content, 'wiki_contents'],
+              'page_id': [wiki_page, 'wiki_pages'],
+              'author_id': [user, 'users'],
+           }
     )
