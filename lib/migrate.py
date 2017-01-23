@@ -117,6 +117,11 @@ def project(src):
                    attachment, 'container_id', 'container_type', 'Project',
                ],
            },
+           m2m={
+               'projects_trackers': [
+                   tracker, 'trackers', 'project_id', 'tracker_id'
+               ],
+           },
            m2o={'parent_id': [project, 'projects']},
     )
 
