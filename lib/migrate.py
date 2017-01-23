@@ -29,6 +29,8 @@ POLYMORPH = 2
 MODEL = 3
 
 def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[]):
+    if data is None:
+        return None
     dst = orm.findone(cn['dst'], table, {'id': data['id']})
     if dst: return dst
     dst = dict(data)
@@ -63,6 +65,7 @@ def project(src):
                'enabled_modules': [enabled_module, 'project_id'],
                'time_entries': [time_entry, 'project_id'],
                'wikis': [wiki, 'project_id'],
+               'members': [member, 'project_id']
            },
            m2o={'parent_id': [project, 'projects']},
     )
@@ -232,7 +235,31 @@ def journal_detail(src):
                'journal_id': [journal, 'journals']
            },
     )
-    
 
 def auth_source(src):
     return fetch('auth_sources', src)
+
+def member_role(src):
+    return fetch('member_roles', src,
+           m2o={
+               'member_id': [member, 'members'],
+               'role_id': [role, 'roles'],
+               'inherited_from': [member_role, 'member_roles'],
+           },
+    )
+
+def role(src):
+    return fetch('roles', src)
+
+def member(src):
+    return fetch('members', src,
+           m2o={
+               'user_id': [user, 'users'],
+               'project_id': [project, 'projects'],
+           },
+           o2m={
+              'member_roles': [
+                  member_role, 'member_id'
+              ],
+           },
+    )
