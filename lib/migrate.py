@@ -334,6 +334,9 @@ def news(src):
               'attachments': [
                   attachment, 'container_id', 'container_type', 'News',
               ],
+              'comments': [
+                  comment, 'commented_id', 'commented_type', 'News',
+              ],
            },
     )
 
@@ -361,6 +364,18 @@ def attachment(src):
                    'Project': [project, 'projects'],
                    'Version': [version, 'versions'],
                    'WikiPage': [wiki_page, 'wiki_pages'],
+               }]
+           },
+           m2o={
+               'author_id': [user, 'users']
+           },
+    )
+
+def comment(src):
+    return fetch('comments', src,
+           polymorphic={
+               'commented_id': ['commented_type', {
+                   'News': [news, 'news'],
                }]
            },
            m2o={
