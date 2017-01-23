@@ -72,6 +72,8 @@ def fetch(table, data, o2m={}, m2o={},
 
 def instance():
     print("importing global instance structure")
+    for s in orm.find(cn['src'], 'settings'):
+        setting(s)
     for s in orm.find(cn['src'], 'issue_statuses'):
         issue_status(s)
     for t in orm.find(cn['src'], 'trackers'):
@@ -505,3 +507,6 @@ def issue_relation(src):
                'issue_to_id': [issue, 'issues'],
            },
     )
+
+def setting(src):
+    return fetch('settings', src, pkey='name')
