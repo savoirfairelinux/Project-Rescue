@@ -65,7 +65,8 @@ def project(src):
                'enabled_modules': [enabled_module, 'project_id'],
                'time_entries': [time_entry, 'project_id'],
                'wikis': [wiki, 'project_id'],
-               'members': [member, 'project_id']
+               'members': [member, 'project_id'],
+               'boards': [board, 'project_id'],
            },
            m2o={'parent_id': [project, 'projects']},
     )
@@ -260,6 +261,38 @@ def member(src):
            o2m={
               'member_roles': [
                   member_role, 'member_id'
+              ],
+           },
+    )
+
+def board(src):
+    return fetch('boards', src,
+           m2o={
+               'last_message_id': [message, 'messages'],
+               'project_id': [project, 'projects'],
+               'parent_id': [board, 'boards'],
+           },
+           o2m={
+              'messages': [
+                  message, 'board_id'
+              ],
+              'boards': [
+                  board, 'parent_id'
+              ],
+           },
+    )
+
+def message(src):
+    return fetch('messages', src,
+           m2o={
+               'board_id': [board, 'boards'],
+               'parent_id': [message, 'messages'],
+               'author_id': [user, 'users'],
+               'last_reply_id': [message, 'messages'],
+           },
+           o2m={
+              'messages': [
+                  message, 'parent_id'
               ],
            },
     )
