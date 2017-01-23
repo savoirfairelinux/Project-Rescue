@@ -28,7 +28,7 @@ COLUMN = 1
 POLYMORPH = 2
 MODEL = 3
 
-def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[]):
+def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
     if data is None:
         return None
     dst = orm.findone(cn['dst'], table, {'id': data['id']})
@@ -36,6 +36,9 @@ def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[]):
     dst = dict(data)
     for s in stub:
         dst.pop(s, None)
+    for _from, _func in translate.items():
+        if _from not in data:
+            dst[_from] = _func(data)
     orm.insert(cn['dst'], table, dst)
     for column, scheme in m2o.items():
         if not data[column]:
@@ -69,6 +72,7 @@ def project(src):
                'boards': [board, 'project_id'],
                'documents': [document, 'project_id'],
                'news': [news, 'project_id'],
+               'queries': [query, 'project_id'],
                'attachments': [
                    attachment, 'container_id', 'container_type', 'Project',
                ],
@@ -438,5 +442,17 @@ def watcher(src):
            },
            m2o={
                'user_id': [user, 'users']
+           },
+    )
+
+def query(src):
+    return fetch('queries', src,
+           stub=['is_public'],
+           translate={
+               'visibility': (lambda src: 2 if src['is_public'] else 0)
+           },
+           m2o={
+               'user_id': [user, 'users'],
+               'project_id': [project, 'projects'],
            },
     )
