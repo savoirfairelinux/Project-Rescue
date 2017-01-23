@@ -130,6 +130,7 @@ def user(src):
            },
            o2m={
               'tokens': [token, 'user_id'],
+              'user_preferences': [user_preference, 'user_id'],
            },
     )
 
@@ -393,3 +394,9 @@ def token(src):
            },
     )
 
+def user_preference(src):
+    return fetch('user_preferences', src,
+           m2o={
+               'user_id': [user, 'users']
+           },
+    )
