@@ -93,6 +93,9 @@ def issue(src):
                'attachments': [
                    attachment, 'container_id', 'container_type', 'Issue',
                ],
+               'watchers': [
+                   watcher, 'watchable_id', 'watchable_type', 'Issue',
+               ],
            },
            m2o={
                'tracker_id': [tracker, 'trackers'],
@@ -185,8 +188,13 @@ def wiki(src):
            m2o={
               'project_id': [project, 'projects'],
            },
-           o2m={'wiki_pages': [wiki_page, 'wiki_id'],
-                'wiki_redirects': [wiki_redirect, 'wiki_id']},
+           o2m={
+               'wiki_pages': [wiki_page, 'wiki_id'],
+               'wiki_redirects': [wiki_redirect, 'wiki_id'],
+               'watchers': [
+                   watcher, 'watchable_id', 'watchable_type', 'Wiki',
+               ]
+           },
     )
 
 def wiki_page(src):
@@ -200,6 +208,9 @@ def wiki_page(src):
               'wiki_contents': [wiki_content, 'page_id'],
               'attachments': [
                   attachment, 'container_id', 'container_type', 'WikiPage',
+              ],
+              'watchers': [
+                  watcher, 'watchable_id', 'watchable_type', 'WikiPage',
               ],
            },
     )
@@ -299,6 +310,9 @@ def board(src):
               'boards': [
                   board, 'parent_id'
               ],
+              'watchers': [
+                  watcher, 'watchable_id', 'watchable_type', 'Board',
+              ],
            },
     )
 
@@ -316,6 +330,9 @@ def message(src):
               ],
               'attachments': [
                   attachment, 'container_id', 'container_type', 'Message',
+              ],
+              'watchers': [
+                  watcher, 'watchable_id', 'watchable_type', 'Issue',
               ],
            },
     )
@@ -341,6 +358,9 @@ def news(src):
               'comments': [
                   comment, 'commented_id', 'commented_type', 'News',
               ],
+              'watchers': [
+                  watcher, 'watchable_id', 'watchable_type', 'News',
+              ],
            },
     )
 
@@ -353,6 +373,9 @@ def document(src):
            o2m={
               'attachments': [
                   attachment, 'container_id', 'container_type', 'Document',
+              ],
+              'watchers': [
+                  watcher, 'watchable_id', 'watchable_type', 'Document',
               ],
            },
     )
@@ -396,6 +419,23 @@ def token(src):
 
 def user_preference(src):
     return fetch('user_preferences', src,
+           m2o={
+               'user_id': [user, 'users']
+           },
+    )
+
+def watcher(src):
+    return fetch('watchers', src,
+           polymorphic={
+               'watchable_id': ['watchable_type', {
+                   'Board': [board, 'boards'],
+                   'Issue': [issue, 'issues'],
+                   'Message': [message, 'messages'],
+                   'News': [news, 'news'],
+                   'Wiki': [wiki, 'wikis'],
+                   'WikiPage': [wiki_page, 'wiki_pages'],
+               }]
+           },
            m2o={
                'user_id': [user, 'users']
            },
