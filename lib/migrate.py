@@ -31,6 +31,8 @@ POLYMORPH = 2
 DST = 3
 MODEL = 3
 
+
+# wow much comprehensible function
 def fetch(table, data, o2m={}, m2o={}, m2m={},
         polymorphic={}, stub=[], translate={}, pkey='id'):
     if data is None:
@@ -62,6 +64,8 @@ def fetch(table, data, o2m={}, m2o={}, m2m={},
             __table = _table[1:]
             for _scheme in scheme:
                 filters = {_scheme[COLUMN]: dst[pkey]}
+                if len(scheme) == 4:
+                    filters[scheme[POLYMORPH]] = scheme[MODEL]
                 for p in orm.find(cn['src'], __table, filters):
                     _scheme[FUNC](p)
         else:
@@ -99,6 +103,8 @@ def instance():
         group(g)
     for q in orm.find(cn['src'], 'queries', {'project_id': None}):
         query(q)
+    for cf in orm.find(cn['src'], 'custom_fields'):
+        custom_field(cf)
 
 def project(src):
     return fetch('projects', src, stub=['customer_id'],
@@ -115,6 +121,9 @@ def project(src):
                'queries': [query, 'project_id'],
                'attachments': [
                    attachment, 'container_id', 'container_type', 'Project',
+               ],
+               'custom_values': [
+                   custom_value, 'customized_id', 'customized_type', 'Project',
                ],
            },
            m2m={
@@ -136,6 +145,9 @@ def issue(src):
            ],
            o2m={
                'issues': [issue, 'parent_id'],
+               'custom_values': [
+                   custom_value, 'customized_id', 'customized_type', 'Issue',
+               ],
                '_issue_relations': [
                    [issue_relation, 'issue_from_id'],
                    [issue_relation, 'issue_to_id'],
@@ -532,3 +544,19 @@ def setting(src):
 
 def group(src):
     return fetch('users', src, stub=['reminder_notification'])
+
+def custom_field(src):
+    return fetch('custom_fields', src)
+
+def custom_value(src):
+    return fetch('custom_values', src,
+           polymorphic={
+               'customized_id': ['customized_type', {
+                   'Project': [project, 'projects'],
+                   'Issue': [issue, 'issues'],
+               }]
+           },
+           m2o={
+               'custom_field_id': [custom_field, 'custom_fields']
+           },
+    )
