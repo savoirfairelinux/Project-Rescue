@@ -26,10 +26,12 @@ FUNC = 0
 TYPE = 0
 TABLE = 1
 COLUMN = 1
+SRC = 2
 POLYMORPH = 2
+DST = 3
 MODEL = 3
 
-def fetch(table, data, o2m={}, m2o={},
+def fetch(table, data, o2m={}, m2o={}, m2m={},
         polymorphic={}, stub=[], translate={}, pkey='id'):
     if data is None:
         return None
@@ -42,6 +44,13 @@ def fetch(table, data, o2m={}, m2o={},
         if _from not in data:
             dst[_from] = _func(data)
     orm.insert(cn['dst'], table, dst)
+    for _table, scheme in m2m.items():
+        for join in orm.find(cn['src'], _table, {scheme[SRC]: dst['id']}):
+            if orm.findone(cn['dst'], _table, join): continue
+            rel = scheme[FUNC](orm.findone(cn['src'], scheme[TABLE], {
+                'id': join[scheme[DST]]}))
+            orm.insert(cn['dst'], _table, {
+                scheme[SRC]: dst['id'], scheme[DST]: rel['id']})
     for column, scheme in m2o.items():
         if not data[column]:
             continue
@@ -86,6 +95,8 @@ def instance():
     for a in orm.find(cn['src'], 'enumerations', {
             'type': 'TimeEntryActivity', 'project_id': None}):
         activity(a)
+    for g in orm.find(cn['src'], 'users', {'type': 'Group'}):
+        group(g)
     for q in orm.find(cn['src'], 'queries', {'project_id': None}):
         query(q)
 
@@ -171,6 +182,9 @@ def user(src):
            o2m={
               'tokens': [token, 'user_id'],
               'user_preferences': [user_preference, 'user_id'],
+           },
+           m2m={
+               'groups_users': [group, 'users', 'user_id', 'group_id'],
            },
     )
 
@@ -510,3 +524,6 @@ def issue_relation(src):
 
 def setting(src):
     return fetch('settings', src, pkey='name')
+
+def group(src):
+    return fetch('users', src, stub=['reminder_notification'])
