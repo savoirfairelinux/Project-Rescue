@@ -67,6 +67,11 @@ def project(src):
                'wikis': [wiki, 'project_id'],
                'members': [member, 'project_id'],
                'boards': [board, 'project_id'],
+               'documents': [document, 'project_id'],
+               'news': [news, 'project_id'],
+               'attachments': [
+                   attachment, 'container_id', 'container_type', 'Project',
+               ],
            },
            m2o={'parent_id': [project, 'projects']},
     )
@@ -84,7 +89,10 @@ def issue(src):
                'issues': [issue, 'parent_id'],
                'journals': [
                    journal, 'journalized_id', 'journalized_type', 'Issue',
-               ]
+               ],
+               'attachments': [
+                   attachment, 'container_id', 'container_type', 'Issue',
+               ],
            },
            m2o={
                'tracker_id': [tracker, 'trackers'],
@@ -144,6 +152,11 @@ def version(src):
            m2o={
               'project_id': [project, 'projects']
            },
+           o2m={
+               'attachments': [
+                   attachment, 'container_id', 'container_type', 'Version',
+               ],
+           }
     )
 
 def enabled_module(src):
@@ -181,6 +194,9 @@ def wiki_page(src):
            o2m={
               'wiki_pages': [wiki_page, 'parent_id'],
               'wiki_contents': [wiki_content, 'page_id'],
+              'attachments': [
+                  attachment, 'container_id', 'container_type', 'WikiPage',
+              ],
            },
     )
 
@@ -294,5 +310,60 @@ def message(src):
               'messages': [
                   message, 'parent_id'
               ],
+              'attachments': [
+                  attachment, 'container_id', 'container_type', 'Message',
+              ],
+           },
+    )
+
+def document_category(src):
+    return fetch('enumerations', src,
+           m2o={
+              'parent_id': [issue_priority, 'enumerations'],
+              'project_id': [project, 'projects']
+           },
+    )
+
+def news(src):
+    return fetch('news', src,
+           m2o={
+               'project_id': [project, 'projects'],
+               'author_id': [user, 'users'],
+           },
+           o2m={
+              'attachments': [
+                  attachment, 'container_id', 'container_type', 'News',
+              ],
+           },
+    )
+
+def document(src):
+    return fetch('documents', src,
+           m2o={
+               'project_id': [project, 'projects'],
+               'category_id': [document_category, 'enumerations'],
+           },
+           o2m={
+              'attachments': [
+                  attachment, 'container_id', 'container_type', 'Document',
+              ],
+           },
+    )
+
+def attachment(src):
+    return fetch('attachments', src,
+           polymorphic={
+               'container_id': ['container_type', {
+                   'Issue': [issue, 'issues'],
+                   'Document': [document, 'documents'],
+                   'Message': [message, 'messages'],
+                   'News': [news, 'news'],
+                   'Project': [project, 'projects'],
+                   'Version': [version, 'versions'],
+                   'WikiPage': [wiki_page, 'wiki_pages'],
+               }]
+           },
+           m2o={
+               'author_id': [user, 'users']
            },
     )
