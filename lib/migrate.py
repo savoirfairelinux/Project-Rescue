@@ -128,6 +128,9 @@ def user(src):
            m2o={
               'auth_source_id': [auth_source, 'auth_sources'],
            },
+           o2m={
+              'tokens': [token, 'user_id'],
+           },
     )
 
 def issue_priority(src):
@@ -382,3 +385,11 @@ def comment(src):
                'author_id': [user, 'users']
            },
     )
+
+def token(src):
+    return fetch('tokens', src,
+           m2o={
+               'user_id': [user, 'users']
+           },
+    )
+
