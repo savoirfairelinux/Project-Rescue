@@ -127,6 +127,10 @@ def project(src):
                ],
            },
            m2m={
+               'custom_fields_projects': [
+                   custom_field,
+                   'custom_fields','project_id', 'custom_field_id'
+               ],
                'projects_trackers': [
                    tracker, 'trackers', 'project_id', 'tracker_id'
                ],
@@ -177,7 +181,12 @@ def issue(src):
     )
 
 def tracker(src):
-    return fetch('trackers', src)
+    return fetch('trackers', src,
+           m2m={
+               'custom_fields_trackers': [custom_field,
+                   'custom_fields', 'tracker_id', 'custom_field_id']
+           }
+    )
 
 def issue_category(src):
     return fetch('issue_categories', src,
