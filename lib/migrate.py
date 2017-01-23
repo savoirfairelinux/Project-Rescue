@@ -15,6 +15,7 @@ def bootstrap(project_identifier):
     })
     if not project_obj:
         return False
+    instance()
     project(project_obj)
     orm.close(cn)
     return True
@@ -60,6 +61,24 @@ def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
     return dst
 
 ##################################################
+
+def instance():
+    print("importing global instance structure")
+    for s in orm.find(cn['src'], 'issue_statuses'):
+        issue_status(s)
+    for t in orm.find(cn['src'], 'trackers'):
+        tracker(t)
+    for w in orm.find(cn['src'], 'workflows'):
+        workflow(w)
+    for p in orm.find(cn['src'], 'enumerations', {
+            'type': 'IssuePriority', 'project_id': None}):
+        issue_priority(p)
+    for a in orm.find(cn['src'], 'enumerations', {
+            'type': 'TimeEntryActivity', 'project_id': None}):
+        activity(a)
+    for q in orm.find(cn['src'], 'queries', {'project_id': None}):
+        query(q)
+
 def project(src):
     return fetch('projects', src, stub=['customer_id'],
            o2m={
@@ -454,5 +473,15 @@ def query(src):
            m2o={
                'user_id': [user, 'users'],
                'project_id': [project, 'projects'],
+           },
+    )
+
+def workflow(src):
+    return fetch('workflows', src,
+           m2o={
+               'tracker_id': [tracker, 'trackers'],
+               'old_status_id': [issue_status, 'issue_statuses'],
+               'new_status_id': [issue_status, 'issue_statuses'],
+               'role_id': [role, 'roles'],
            },
     )
