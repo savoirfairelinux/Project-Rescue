@@ -29,10 +29,11 @@ COLUMN = 1
 POLYMORPH = 2
 MODEL = 3
 
-def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
+def fetch(table, data, o2m={}, m2o={},
+        polymorphic={}, stub=[], translate={}, pkey='id'):
     if data is None:
         return None
-    dst = orm.findone(cn['dst'], table, {'id': data['id']})
+    dst = orm.findone(cn['dst'], table, {pkey: data[pkey]})
     if dst: return dst
     dst = dict(data)
     for s in stub:
@@ -45,17 +46,17 @@ def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
         if not data[column]:
             continue
         scheme[FUNC](orm.findone(
-            cn['src'], scheme[TABLE], {'id': dst[column]}
+            cn['src'], scheme[TABLE], {pkey: dst[column]}
         ))
     for _table, scheme in o2m.items():
         if _table[:1] == '_':
             __table = _table[1:]
             for _scheme in scheme:
-                filters = {_scheme[COLUMN]: dst['id']}
+                filters = {_scheme[COLUMN]: dst[pkey]}
                 for p in orm.find(cn['src'], __table, filters):
                     _scheme[FUNC](p)
         else:
-            filters = {scheme[COLUMN]: dst['id']}
+            filters = {scheme[COLUMN]: dst[pkey]}
             if len(scheme) == 4:
                 filters[scheme[POLYMORPH]] = scheme[MODEL]
             for p in orm.find(cn['src'], _table, filters):
@@ -63,7 +64,7 @@ def fetch(table, data, o2m={}, m2o={}, polymorphic={}, stub=[], translate={}):
     for poly_id_field, scheme in polymorphic.items():
         _scheme = scheme[COLUMN][data[scheme[TYPE]]]
         _scheme[FUNC](orm.findone(
-            cn['src'], _scheme[TABLE], {'id': dst[poly_id_field]}
+            cn['src'], _scheme[TABLE], {pkey: dst[poly_id_field]}
         ))
     return dst
 
