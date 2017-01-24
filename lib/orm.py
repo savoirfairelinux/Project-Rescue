@@ -60,11 +60,34 @@ def fetchone(conn, query, params=[]):
     cur.close()
     return line
 
-def execute(conn, query, params):
+def execute(conn, query, params=[]):
     cur = conn[CONN].cursor()
     cur.execute(query, params)
     cur.close()
 
+def fetch_tables(conn):
+    # works only under mysql for the moment
+    if conn[TYPE] == 'mysql':
+        query = 'SHOW TABLES'
+    for table in fetch(conn, query):
+        yield list(table.values())[0]
+
+def get_sequence_value(conn, table):
+    # works only under mysql for the moment
+    try:
+        s = fetchone(conn, 'SELECT MAX(id) FROM {0}'.format(table))['MAX(id)']
+    except mysql.err.InternalError:
+        s = None
+    return s
+
+def set_sequence_value(conn, table, value):
+    # works only under postgres for the moment
+    if conn[TYPE] == 'postgresql':
+        q = 'ALTER SEQUENCE {0}_id_seq RESTART WITH {1}'.format(table, value)
+    try:
+        execute(conn, q)
+    except postgresql.ProgrammingError:
+        pass
 
 ##################################
 
@@ -83,6 +106,8 @@ def translate_where(filters):
     return res
 
 def translate_result(conn, table, result):
+    if conn[TYPE] == 'postgresql':
+        return result
     if result is None: return None
     if table not in translate_result.data:
         translate_result.data[table] = describe(conn, table)

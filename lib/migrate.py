@@ -1,4 +1,7 @@
 from . import orm
+from .config import config
+from time import time
+import math
 from pprint import pprint
 
 def init():
@@ -85,6 +88,7 @@ def fetch(table, data, o2m={}, m2o={}, m2m={},
 
 def instance():
     print("importing global instance structure")
+    pkeys()
     for s in orm.find(cn['src'], 'settings'):
         setting(s)
     for s in orm.find(cn['src'], 'issue_statuses'):
@@ -105,6 +109,27 @@ def instance():
         query(q)
     for cf in orm.find(cn['src'], 'custom_fields'):
         custom_field(cf)
+
+def pkeys():
+    status = orm.findone(cn['dst'], 'settings', {'name': 'sequences-migrated'})
+    if status and int(status['value']) > 0:
+        return
+    print("migrating primary key sequences to safe values")
+    sequences = {}
+    for table in orm.fetch_tables(cn['src']):
+        seq = orm.get_sequence_value(cn['src'], table)
+        if not seq: continue
+        sequences[table] = seq
+    rel = config['relative']
+    relative_value = sequences[rel['reference_table']]
+    for table, seqval in sequences.items():
+        newseq = int((seqval / relative_value) * rel['new_sequence'])
+        if table != rel['reference_table'] and newseq < rel['new_sequence']:
+            newseq = rel['new_sequence']
+        orm.set_sequence_value(cn['dst'], table, newseq + 1)
+    orm.insert(cn['dst'], 'settings', {
+        'name': 'sequences-migrated', 'value': int(time())
+    })
 
 def project(src):
     return fetch('projects', src, stub=['customer_id'],

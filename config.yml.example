@@ -11,3 +11,7 @@ dst:
     host: 127.0.0.1
     user: postgres
     pass: test
+
+relative:
+    reference_table: issues
+    new_sequence: 500000
