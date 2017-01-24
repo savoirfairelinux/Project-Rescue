@@ -1,18 +1,37 @@
 from . import orm
 from .config import config
 from time import time
-import math
+import sys, math, paramiko
 from pprint import pprint
 
 def init():
+    if 'ssh' in config['src']:
+        print("initializing ssh connection with src")
+        ssh = paramiko.SSHClient() 
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(config['src']['ssh']['host'],
+                        username=config['src']['ssh']['user'],
+                        password=config['src']['ssh']['pass'])
+        except paramiko.ssh_exception.AuthenticationException:
+            print("ssh authentication to src failed.")
+            sys.exit(1)
+        sftp = ssh.open_sftp()
+    else:
+        ssh = None
+        sftp = None
     print("initializing migration process")
-    return orm.init()
+    return orm.init(), ssh, sftp
 
 def close(cn):
     print("closing connection with databases")
     orm.close(cn)
+    if ssh:
+        print("closing ssh connection with remote")
+        sftp.close()
+        ssh.close()
 
-def bootstrap(project_identifier):
+def run(project_identifier):
     project_obj = orm.findone(cn['src'], 'projects', {
         'identifier': project_identifier
     })
@@ -20,10 +39,13 @@ def bootstrap(project_identifier):
         return False
     instance()
     project(project_obj)
-    orm.close(cn)
+    close(cn)
     return True
 
-cn = init()
+cn, ssh, sftp = init()
+
+ENTITY = 0
+AFFECTED = 1
 
 FUNC = 0
 TYPE = 0
@@ -39,9 +61,9 @@ MODEL = 3
 def fetch(table, data, o2m={}, m2o={}, m2m={},
         polymorphic={}, stub=[], translate={}, pkey='id'):
     if data is None:
-        return None
+        return None, False
     dst = orm.findone(cn['dst'], table, {pkey: data[pkey]})
-    if dst: return dst
+    if dst: return dst, False
     dst = dict(data)
     for s in stub:
         dst.pop(s, None)
@@ -82,7 +104,7 @@ def fetch(table, data, o2m={}, m2o={}, m2m={},
         _scheme[FUNC](orm.findone(
             cn['src'], _scheme[TABLE], {pkey: dst[poly_id_field]}
         ))
-    return dst
+    return dst, True
 
 ##################################################
 
@@ -203,7 +225,7 @@ def issue(src):
                'parent_id': [issue, 'issues'],
                'root_id': [issue, 'issues']
            },
-    )
+    )[ENTITY]
 
 def tracker(src):
     return fetch('trackers', src,
@@ -211,7 +233,7 @@ def tracker(src):
                'custom_fields_trackers': [custom_field,
                    'custom_fields', 'tracker_id', 'custom_field_id']
            }
-    )
+    )[ENTITY]
 
 def issue_category(src):
     return fetch('issue_categories', src,
@@ -220,10 +242,10 @@ def issue_category(src):
               'assigned_to_id': [user, 'users'],
               'project_id': [project, 'projects']
            },
-    )
+    )[ENTITY]
 
 def issue_status(src):
-    return fetch('issue_statuses', src)
+    return fetch('issue_statuses', src)[ENTITY]
 
 def user(src):
     return fetch('users', src, stub=['reminder_notification'],
@@ -237,7 +259,7 @@ def user(src):
            m2m={
                'groups_users': [group, 'users', 'user_id', 'group_id'],
            },
-    )
+    )[ENTITY]
 
 def issue_priority(src):
     return fetch('enumerations', src,
@@ -245,7 +267,7 @@ def issue_priority(src):
               'parent_id': [issue_priority, 'enumerations'],
               'project_id': [project, 'projects']
            },
-    )
+    )[ENTITY]
 
 def activity(src):
     return fetch('enumerations', src,
@@ -253,7 +275,7 @@ def activity(src):
               'parent_id': [issue_priority, 'enumerations'],
               'project_id': [project, 'projects']
            },
-    )
+    )[ENTITY]
 
 def version(src):
     return fetch('versions', src,
@@ -266,14 +288,14 @@ def version(src):
                    attachment, 'container_id', 'container_type', 'Version',
                ],
            }
-    )
+    )[ENTITY]
 
 def enabled_module(src):
     return fetch('enabled_modules', src,
            m2o={
               'project_id': [project, 'projects']
            },
-    )
+    )[ENTITY]
 
 def time_entry(src):
     return fetch('time_entries', src, stub=[],
@@ -283,7 +305,7 @@ def time_entry(src):
                'issue_id': [issue, 'issues'],
                'activity_id': [activity, 'enumerations'],
            },
-    )
+    )[ENTITY]
 
 def wiki(src):
     return fetch('wikis', src,
@@ -297,7 +319,7 @@ def wiki(src):
                    watcher, 'watchable_id', 'watchable_type', 'Wiki',
                ]
            },
-    )
+    )[ENTITY]
 
 def wiki_page(src):
     return fetch('wiki_pages', src,
@@ -315,7 +337,7 @@ def wiki_page(src):
                   watcher, 'watchable_id', 'watchable_type', 'WikiPage',
               ],
            },
-    )
+    )[ENTITY]
 
 def wiki_content(src):
     return fetch('wiki_contents', src,
@@ -328,7 +350,7 @@ def wiki_content(src):
                   wiki_content_version, 'wiki_content_id'
               ],
            },
-    )
+    )[ENTITY]
 
 def wiki_redirect(src):
     return fetch('wiki_redirects', src,
@@ -344,7 +366,7 @@ def wiki_content_version(src):
               'page_id': [wiki_page, 'wiki_pages'],
               'author_id': [user, 'users'],
            }
-    )
+    )[ENTITY]
 
 def journal(src):
     return fetch('journals', src, stub=[],
@@ -361,17 +383,17 @@ def journal(src):
                   journal_detail, 'journal_id'
               ],
            },
-    )
+    )[ENTITY]
 
 def journal_detail(src):
     return fetch('journal_details', src,
            m2o={
                'journal_id': [journal, 'journals']
            },
-    )
+    )[ENTITY]
 
 def auth_source(src):
-    return fetch('auth_sources', src)
+    return fetch('auth_sources', src)[ENTITY]
 
 def member_role(src):
     return fetch('member_roles', src,
@@ -380,10 +402,10 @@ def member_role(src):
                'role_id': [role, 'roles'],
                'inherited_from': [member_role, 'member_roles'],
            },
-    )
+    )[ENTITY]
 
 def role(src):
-    return fetch('roles', src)
+    return fetch('roles', src)[ENTITY]
 
 def member(src):
     return fetch('members', src,
@@ -396,7 +418,7 @@ def member(src):
                   member_role, 'member_id'
               ],
            },
-    )
+    )[ENTITY]
 
 def board(src):
     return fetch('boards', src,
@@ -416,7 +438,7 @@ def board(src):
                   watcher, 'watchable_id', 'watchable_type', 'Board',
               ],
            },
-    )
+    )[ENTITY]
 
 def message(src):
     return fetch('messages', src,
@@ -437,7 +459,7 @@ def message(src):
                   watcher, 'watchable_id', 'watchable_type', 'Issue',
               ],
            },
-    )
+    )[ENTITY]
 
 def document_category(src):
     return fetch('enumerations', src,
@@ -445,7 +467,7 @@ def document_category(src):
               'parent_id': [issue_priority, 'enumerations'],
               'project_id': [project, 'projects']
            },
-    )
+    )[ENTITY]
 
 def news(src):
     return fetch('news', src,
@@ -464,7 +486,7 @@ def news(src):
                   watcher, 'watchable_id', 'watchable_type', 'News',
               ],
            },
-    )
+    )[ENTITY]
 
 def document(src):
     return fetch('documents', src,
@@ -480,10 +502,11 @@ def document(src):
                   watcher, 'watchable_id', 'watchable_type', 'Document',
               ],
            },
-    )
+    )[ENTITY]
 
 def attachment(src):
-    return fetch('attachments', src,
+    if not ssh: return
+    callback = fetch('attachments', src,
            polymorphic={
                'container_id': ['container_type', {
                    'Issue': [issue, 'issues'],
@@ -499,6 +522,12 @@ def attachment(src):
                'author_id': [user, 'users']
            },
     )
+    if not callback[AFFECTED]: return callback[ENTITY]
+    print("downloading attachment #{0} from src".format(
+        callback[ENTITY]['id']))
+    sftp.get(config['dst']['path']+'/'+callback[ENTITY]['disk_filename'],
+             config['src']['ssh']['path']+'/'+callback[ENTITY]['disk_filename'])
+    return callback[ENTITY]
 
 def comment(src):
     return fetch('comments', src,
@@ -510,21 +539,21 @@ def comment(src):
            m2o={
                'author_id': [user, 'users']
            },
-    )
+    )[ENTITY]
 
 def token(src):
     return fetch('tokens', src,
            m2o={
                'user_id': [user, 'users']
            },
-    )
+    )[ENTITY]
 
 def user_preference(src):
     return fetch('user_preferences', src,
            m2o={
                'user_id': [user, 'users']
            },
-    )
+    )[ENTITY]
 
 def watcher(src):
     return fetch('watchers', src,
@@ -541,7 +570,7 @@ def watcher(src):
            m2o={
                'user_id': [user, 'users']
            },
-    )
+    )[ENTITY]
 
 def query(src):
     return fetch('queries', src,
@@ -553,7 +582,7 @@ def query(src):
                'user_id': [user, 'users'],
                'project_id': [project, 'projects'],
            },
-    )
+    )[ENTITY]
 
 def workflow(src):
     return fetch('workflows', src,
@@ -563,7 +592,7 @@ def workflow(src):
                'new_status_id': [issue_status, 'issue_statuses'],
                'role_id': [role, 'roles'],
            },
-    )
+    )[ENTITY]
 
 def issue_relation(src):
     return fetch('issue_relations', src,
@@ -571,16 +600,16 @@ def issue_relation(src):
                'issue_from_id': [issue, 'issues'],
                'issue_to_id': [issue, 'issues'],
            },
-    )
+    )[ENTITY]
 
 def setting(src):
-    return fetch('settings', src, pkey='name')
+    return fetch('settings', src, pkey='name')[ENTITY]
 
 def group(src):
-    return fetch('users', src, stub=['reminder_notification'])
+    return fetch('users', src, stub=['reminder_notification'])[ENTITY]
 
 def custom_field(src):
-    return fetch('custom_fields', src)
+    return fetch('custom_fields', src)[ENTITY]
 
 def custom_value(src):
     return fetch('custom_values', src,
@@ -593,4 +622,4 @@ def custom_value(src):
            m2o={
                'custom_field_id': [custom_field, 'custom_fields']
            },
-    )
+    )[ENTITY]

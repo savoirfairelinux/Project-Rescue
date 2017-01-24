@@ -8,7 +8,7 @@ if len(sys.argv) < 2:
     sys.exit(1)
 
 project_identifier = sys.argv[-1]
-if not migrate.bootstrap(project_identifier):
+if not migrate.run(project_identifier):
     print("Project with identifier '{0}' not found on src database".format(
         project_identifier
     ))

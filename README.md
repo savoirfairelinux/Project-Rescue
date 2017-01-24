@@ -19,6 +19,11 @@ Al the IDs and primary keys will be kept original. The new IDs will be bumped
 from the setting value `relative.new_sequence` described in 'Configuration
 procedure' section of this document.
 
+The plugin is actually only compatible to migrate from MySQL to PostgreSQL,
+but after a little few adjustments in the `lib/orm.py` file, it should work
+like a charm. Feel free to contribute that fix if you especially need this.
+
+
 ### License ###
 
 This project is released under GNU GPLv3 license, don't hesitate to read
@@ -39,6 +44,10 @@ $ ./bootstrap
 Once you've installed the dependencies, you will need to copy the 
 `config.yml.example` to `config.yml` and customize it accordingly to your needs:
 
+You can completely remove the `src.ssh` and `dst.path` if you don't want
+to migrate the attachments nor their files.
+
+
 ```yaml
 src:
     type: mysql
@@ -46,6 +55,11 @@ src:
     host: localhost
     user: root
     pass: test
+    ssh:
+        host: 192.168.0.1
+        user: test
+        pass: test123
+        path: /home/redmine/files/
 
 dst:
     type: postgresql
@@ -53,6 +67,7 @@ dst:
     host: 127.0.0.1
     user: postgres
     pass: test
+    path: /var/lib/redmine/default/files/
 
 relative:
     reference_table: issues

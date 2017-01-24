@@ -1,3 +1,5 @@
 pyyaml
 psycopg2
 pymysql
+paramiko
+cffi

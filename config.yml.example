@@ -4,6 +4,11 @@ src:
     host: localhost
     user: root
     pass: test
+    ssh:
+        host: 192.168.0.1
+        user: test
+        pass: test123
+        path: /home/redmine/files/
 
 dst:
     type: postgresql
@@ -11,6 +16,7 @@ dst:
     host: 127.0.0.1
     user: postgres
     pass: test
+    path: /var/lib/redmine/default/files/
 
 relative:
     reference_table: issues
