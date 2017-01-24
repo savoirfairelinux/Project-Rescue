@@ -22,7 +22,8 @@ def connect(cfg):
             host=cfg['host'], user=cfg['user'],
             passwd=cfg['pass'], db=cfg['name'],
         ))
-    res[CONN].autocommit = True
+    if config['commit_at_each_entry']:
+        res[CONN].autocommit = True
     return res
 
 def init():

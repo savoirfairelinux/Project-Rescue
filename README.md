@@ -47,6 +47,9 @@ Once you've installed the dependencies, you will need to copy the
 You can completely remove the `src.ssh` and `dst.path` if you don't want
 to migrate the attachments nor their files.
 
+If `commit_at_each_entry` is set to true, each time an object is migrated,
+it will be instantatly commited into the db, if set to false, the changes
+will be commited only once everything migrated without any errors.
 
 ```yaml
 src:
@@ -68,6 +71,8 @@ dst:
     user: postgres
     pass: test
     path: /var/lib/redmine/default/files/
+
+commit_at_each_entry: false
 
 relative:
     reference_table: issues

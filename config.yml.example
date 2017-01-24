@@ -18,6 +18,8 @@ dst:
     pass: test
     path: /var/lib/redmine/default/files/
 
+commit_at_each_entry: false
+
 relative:
     reference_table: issues
     new_sequence: 500000

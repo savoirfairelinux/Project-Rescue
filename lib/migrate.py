@@ -24,6 +24,9 @@ def init():
     return orm.init(), ssh, sftp
 
 def close(cn):
+    if not config['commit_at_each_entry']:
+        print("committing changes onto the dst db")
+        cn['dst'][orm.CONN].commit()
     print("closing connection with databases")
     orm.close(cn)
     if ssh:
