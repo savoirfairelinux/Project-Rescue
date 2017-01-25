@@ -23,3 +23,8 @@ commit_at_each_entry: false
 relative:
     reference_table: issues
     new_sequence: 500000
+
+plugins:
+    - redmine_backlogs
+    - redmine_issue_templates
+    - redmine_mail_reminder

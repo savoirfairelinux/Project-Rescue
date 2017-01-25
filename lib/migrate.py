@@ -3,6 +3,7 @@ from .config import config
 from time import time
 import sys, math, paramiko
 from pprint import pprint
+from datetime import datetime
 
 def init():
     if 'ssh' in config['src']:
@@ -69,7 +70,7 @@ def fetch(table, data, o2m={}, m2o={}, m2m={},
     if dst: return dst, False
     dst = dict(data)
     for s in stub:
-        dst.pop(s, None)
+        del dst[s]
     for _from, _func in translate.items():
         if _from not in data:
             dst[_from] = _func(data)
@@ -141,7 +142,7 @@ def pkeys():
         return
     print("migrating primary key sequences to safe values")
     sequences = {}
-    for table in orm.fetch_tables(cn['src']):
+    for table in orm.fetch_tables(cn['dst']):
         seq = orm.get_sequence_value(cn['src'], table)
         if not seq: continue
         sequences[table] = seq
@@ -157,25 +158,29 @@ def pkeys():
     })
 
 def project(src):
-    return fetch('projects', src, stub=['customer_id'],
-           o2m={
-               'projects': [project, 'parent_id'],
-               'issues': [issue, 'project_id'],
-               'enabled_modules': [enabled_module, 'project_id'],
-               'time_entries': [time_entry, 'project_id'],
-               'wikis': [wiki, 'project_id'],
-               'members': [member, 'project_id'],
-               'boards': [board, 'project_id'],
-               'documents': [document, 'project_id'],
-               'news': [news, 'project_id'],
-               'queries': [query, 'project_id'],
-               'attachments': [
-                   attachment, 'container_id', 'container_type', 'Project',
-               ],
-               'custom_values': [
-                   custom_value, 'customized_id', 'customized_type', 'Project',
-               ],
-           },
+    o2m={
+       'projects': [project, 'parent_id'],
+       'issues': [issue, 'project_id'],
+       'enabled_modules': [enabled_module, 'project_id'],
+       'time_entries': [time_entry, 'project_id'],
+       'wikis': [wiki, 'project_id'],
+       'members': [member, 'project_id'],
+       'boards': [board, 'project_id'],
+       'documents': [document, 'project_id'],
+       'news': [news, 'project_id'],
+       'queries': [query, 'project_id'],
+       'attachments': [
+            attachment, 'container_id', 'container_type', 'Project',
+       ],
+       'custom_values': [
+            custom_value, 'customized_id', 'customized_type', 'Project',
+       ],
+       'rb_project_settings': [rb_project_settings, 'project_id']
+    }
+    if 'redmine_backlogs' in config['plugins']:
+        o2m['releases'] = [release, 'project_id']
+
+    return fetch('projects', src, stub=['customer_id'], o2m=o2m,
            m2m={
                'custom_fields_projects': [
                    custom_field,
@@ -189,46 +194,55 @@ def project(src):
     )
 
 def issue(src):
-    return fetch('issues', src, stub=[
-                'story_points',
-                'remaining_hours',
-                'release_relationship',
-                'release_id',
-                'reminder_notification',
-                'position',
-           ],
-           o2m={
-               'issues': [issue, 'parent_id'],
-               'custom_values': [
-                   custom_value, 'customized_id', 'customized_type', 'Issue',
-               ],
-               '_issue_relations': [
-                   [issue_relation, 'issue_from_id'],
-                   [issue_relation, 'issue_to_id'],
-               ],
-               'journals': [
-                   journal, 'journalized_id', 'journalized_type', 'Issue',
-               ],
-               'attachments': [
-                   attachment, 'container_id', 'container_type', 'Issue',
-               ],
-               'watchers': [
-                   watcher, 'watchable_id', 'watchable_type', 'Issue',
-               ],
-           },
-           m2o={
-               'tracker_id': [tracker, 'trackers'],
-               'project_id': [project, 'projects'],
-               'category_id': [issue_category, 'issue_categories'],
-               'status_id': [issue_status, 'issue_statuses'],
-               'assigned_to_id': [user, 'users'],
-               'priority_id': [issue_priority, 'enumerations'],
-               'fixed_version_id': [version, 'versions'],
-               'author_id': [user, 'users'],
-               'parent_id': [issue, 'issues'],
-               'root_id': [issue, 'issues']
-           },
-    )[ENTITY]
+    stub = [
+        'story_points',
+        'remaining_hours',
+        'release_relationship',
+        'release_id',
+        'reminder_notification',
+        'position',
+    ]
+    m2o={
+        'tracker_id': [tracker, 'trackers'],
+        'project_id': [project, 'projects'],
+        'category_id': [issue_category, 'issue_categories'],
+        'status_id': [issue_status, 'issue_statuses'],
+        'assigned_to_id': [user, 'users'],
+        'priority_id': [issue_priority, 'enumerations'],
+        'fixed_version_id': [version, 'versions'],
+        'author_id': [user, 'users'],
+        'parent_id': [issue, 'issues'],
+        'root_id': [issue, 'issues']
+    }
+    o2m={
+        'issues': [issue, 'parent_id'],
+        'custom_values': [
+            custom_value, 'customized_id', 'customized_type', 'Issue',
+        ],
+        '_issue_relations': [
+            [issue_relation, 'issue_from_id'],
+            [issue_relation, 'issue_to_id'],
+        ],
+        'journals': [
+            journal, 'journalized_id', 'journalized_type', 'Issue',
+        ],
+        'attachments': [
+            attachment, 'container_id', 'container_type', 'Issue',
+        ],
+        'watchers': [
+            watcher, 'watchable_id', 'watchable_type', 'Issue',
+        ],
+    }
+    if 'redmine_backlogs' in config['plugins']:
+        stub.remove('story_points')
+        stub.remove('remaining_hours')
+        stub.remove('release_relationship')
+        stub.remove('release_id')
+        stub.remove('position')
+        m2o['release_id'] = [release, 'releases']
+        o2m['rb_issue_history'] = [rb_issue_history, 'issue_id']
+
+    return fetch('issues', src, stub=stub, m2o=m2o, o2m=o2m)[ENTITY]
 
 def tracker(src):
     return fetch('trackers', src,
@@ -248,10 +262,21 @@ def issue_category(src):
     )[ENTITY]
 
 def issue_status(src):
-    return fetch('issue_statuses', src)[ENTITY]
+    return fetch('issue_statuses', src, stub=['is_default'])[ENTITY]
 
 def user(src):
-    return fetch('users', src, stub=['reminder_notification'],
+    if src is None:
+        return None
+    if src['mail']:
+        email_address({
+            'user_id': src['id'],
+            'address': src['mail'],
+            'is_default': True,
+            'notify': False,
+            'created_on': datetime.now(),
+            'updated_on': datetime.now()
+    })
+    return fetch('users', src, stub=['reminder_notification', 'mail'],
            m2o={
               'auth_source_id': [auth_source, 'auth_sources'],
            },
@@ -263,6 +288,9 @@ def user(src):
                'groups_users': [group, 'users', 'user_id', 'group_id'],
            },
     )[ENTITY]
+
+def email_address(src):
+    return fetch('email_addresses', src, pkey='user_id')[ENTITY]
 
 def issue_priority(src):
     return fetch('enumerations', src,
@@ -281,15 +309,19 @@ def activity(src):
     )[ENTITY]
 
 def version(src):
-    return fetch('versions', src,
-           stub=['sprint_start_date'],
+    stub = ['sprint_start_date']
+    o2m={
+        'attachments': [
+            attachment, 'container_id', 'container_type', 'Version',
+        ],
+    }
+    if 'redmine_backlogs' in config['plugins']:
+        stub.remove('sprint_start_date')
+        o2m['rb_sprint_burndown'] = [rb_sprint_burndown, 'version_id']
+
+    return fetch('versions', src, stub=stub, o2m=o2m,
            m2o={
               'project_id': [project, 'projects']
-           },
-           o2m={
-               'attachments': [
-                   attachment, 'container_id', 'container_type', 'Version',
-               ],
            }
     )[ENTITY]
 
@@ -359,7 +391,12 @@ def wiki_redirect(src):
     return fetch('wiki_redirects', src,
            m2o={
               'wiki_id': [wiki, 'wikis'],
-           }
+           },
+           translate={
+               'redirects_to_wiki_id': (lambda src: wiki(
+                   orm.findone(cn['src'], 'wikis',
+                       {'id': src['wiki_id']}))['id'])
+           },
     )
 
 def wiki_content_version(src):
@@ -609,7 +646,7 @@ def setting(src):
     return fetch('settings', src, pkey='name')[ENTITY]
 
 def group(src):
-    return fetch('users', src, stub=['reminder_notification'])[ENTITY]
+    return fetch('users', src, stub=['mail', 'reminder_notification'])[ENTITY]
 
 def custom_field(src):
     return fetch('custom_fields', src)[ENTITY]
@@ -624,5 +661,36 @@ def custom_value(src):
            },
            m2o={
                'custom_field_id': [custom_field, 'custom_fields']
+           },
+    )[ENTITY]
+
+
+##############################################################################
+
+def release(src):
+    return fetch('releases', src,
+           m2o={
+               'project_id': [project, 'projects']
+           },
+    )[ENTITY]
+
+def rb_issue_history(src):
+    return fetch('rb_issue_history', src,
+           m2o={
+               'issue_id': [issue, 'issues']
+           },
+    )[ENTITY]
+
+def rb_project_settings(src):
+    return fetch('rb_project_settings', src,
+           m2o={
+               'project_id': [project, 'projects']
+           },
+    )[ENTITY]
+
+def rb_sprint_burndown(src):
+    return fetch('rb_sprint_burndown', src,
+           m2o={
+               'version_id': [version, 'versions']
            },
     )[ENTITY]

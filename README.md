@@ -51,6 +51,18 @@ If `commit_at_each_entry` is set to true, each time an object is migrated,
 it will be instantatly commited into the db, if set to false, the changes
 will be commited only once everything migrated without any errors.
 
+Set your plugins to migrate their data. If you try to migrate data without
+setting the according plugin (or you set a plugin that is not installed at all)
+the migration process will likely to crash, but you have nothing to loose
+from trying if you set `commit_at_each_entry = false` :
+
+This tool is only compatible with those plugins for the moment, 
+
+1. redmine_backlogs
+2. redmine_issue_templates
+3. redmine_mail_reminder
+
+
 ```yaml
 src:
     type: mysql
@@ -77,6 +89,11 @@ commit_at_each_entry: false
 relative:
     reference_table: issues
     new_sequence: 500000
+
+plugins:
+    - redmine_backlogs
+    - redmine_issue_templates
+    - redmine_mail_reminder
 ```
 
 The `relative.reference_table` is the table that will be used as a reference

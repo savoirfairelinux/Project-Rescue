@@ -67,9 +67,12 @@ def execute(conn, query, params=[]):
     cur.close()
 
 def fetch_tables(conn):
-    # works only under mysql for the moment
     if conn[TYPE] == 'mysql':
         query = 'SHOW TABLES'
+    if conn[TYPE] == 'postgresql':
+        query = """SELECT table_name
+                  FROM information_schema.tables
+                  WHERE table_schema='public' AND table_type='BASE TABLE';"""
     for table in fetch(conn, query):
         yield list(table.values())[0]
 
@@ -78,6 +81,8 @@ def get_sequence_value(conn, table):
     try:
         s = fetchone(conn, 'SELECT MAX(id) FROM {0}'.format(table))['MAX(id)']
     except mysql.err.InternalError:
+        s = None
+    except mysql.err.ProgrammingError:
         s = None
     return s
 
