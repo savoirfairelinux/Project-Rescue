@@ -131,7 +131,7 @@ def insert(conn, table, values={}):
     if 'id' in values:
         print("inserting in {0} record #{1}".format(table, values['id']))
     else:
-        print("inserting metadata in {0} table".format(table))
+        print("inserting in {0} table metadata".format(table))
     macro = []
     columns = []
     params = []

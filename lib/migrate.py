@@ -135,6 +135,9 @@ def instance():
         query(q)
     for cf in orm.find(cn['src'], 'custom_fields'):
         custom_field(cf)
+    if 'redmine_issue_templates' in config['plugins']:
+        for tpl in orm.find(cn['src'], 'global_issue_templates'):
+            global_issue_template(tpl)
 
 def pkeys():
     status = orm.findone(cn['dst'], 'settings', {'name': 'sequences-migrated'})
@@ -174,22 +177,28 @@ def project(src):
        ],
        'custom_values': [
             custom_value, 'customized_id', 'customized_type', 'Project',
-       ],
-       'rb_project_settings': [rb_project_settings, 'project_id']
+       ]
+    }
+    m2m={
+        'custom_fields_projects': [
+            custom_field, 'custom_fields','project_id', 'custom_field_id'
+        ],
+        'projects_trackers': [
+            tracker, 'trackers', 'project_id', 'tracker_id'
+        ],
     }
     if 'redmine_backlogs' in config['plugins']:
         o2m['releases'] = [release, 'project_id']
+        o2m['rb_project_settings'] = [rb_project_settings, 'project_id']
+    if 'redmine_issue_templates' in config['plugins']:
+        o2m['issue_templates'] = [issue_template, 'project_id']
+        o2m['issue_template_settings'] = [issue_template_setting, 'project_id']
+        m2m['global_issue_templates_projects'] = [
+            global_issue_template, 'global_issue_templates',
+            'project_id', 'global_issue_template_id'
+        ]
 
-    return fetch('projects', src, stub=['customer_id'], o2m=o2m,
-           m2m={
-               'custom_fields_projects': [
-                   custom_field,
-                   'custom_fields','project_id', 'custom_field_id'
-               ],
-               'projects_trackers': [
-                   tracker, 'trackers', 'project_id', 'tracker_id'
-               ],
-           },
+    return fetch('projects', src, stub=['customer_id'], o2m=o2m, m2m=m2m,
            m2o={'parent_id': [project, 'projects']},
     )
 
@@ -249,7 +258,12 @@ def tracker(src):
            m2m={
                'custom_fields_trackers': [custom_field,
                    'custom_fields', 'tracker_id', 'custom_field_id']
-           }
+           },
+           translate={
+               'default_status_id': (lambda src: issue_status(
+                   orm.findone(cn['src'], 'issue_statuses',
+                       {'is_default': True}))['id'])
+           },
     )[ENTITY]
 
 def issue_category(src):
@@ -692,5 +706,29 @@ def rb_sprint_burndown(src):
     return fetch('rb_sprint_burndown', src,
            m2o={
                'version_id': [version, 'versions']
+           },
+    )[ENTITY]
+
+def global_issue_template(src):
+    return fetch('global_issue_templates', src,
+           m2o={
+               'tracker_id': [tracker, 'trackers'],
+               'author_id': [user, 'users'],
+           },
+    )[ENTITY]
+
+def issue_template(src):
+    return fetch('issue_templates', src,
+           m2o={
+               'project_id': [project, 'projects'],
+               'tracker_id': [tracker, 'trackers'],
+               'author_id': [user, 'users'],
+           },
+    )[ENTITY]
+
+def issue_template_setting(src):
+    return fetch('issue_templates_settings', src,
+           m2o={
+               'project_id': [project, 'projects']
            },
     )[ENTITY]
