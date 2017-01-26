@@ -131,7 +131,7 @@ def insert(conn, table, values={}):
     if 'id' in values:
         print("inserting in {0} record #{1}".format(table, values['id']))
     else:
-        print("inserting in {0} table metadata".format(table))
+        print("inserting in {0} metadata".format(table))
     macro = []
     columns = []
     params = []
@@ -142,6 +142,12 @@ def insert(conn, table, values={}):
     execute(conn, 'INSERT INTO {0} ({1}) VALUES({2})'.format(
         table, ','.join(columns), ','.join(macro)
     ), params)
+
+def delete(conn, table, filters={}):
+    print("delete metadata from {0}".format(table))
+    context = translate_where(filters)
+    execute(conn, 'DELETE FROM {0} {1}'.format(
+            table, context['macro']), context['params'])
 
 def findone(conn, table, filters={}):
     context = translate_where(filters)

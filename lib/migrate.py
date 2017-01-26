@@ -62,11 +62,16 @@ MODEL = 3
 
 
 # wow much comprehensible function
-def fetch(table, data, o2m={}, m2o={}, m2m={},
-        polymorphic={}, stub=[], translate={}, pkey='id'):
+def fetch(table, data, o2m={}, m2o={}, m2m={}, polymorphic={},
+          stub=[], translate={}, pkey='id', ref='id', sref=None):
     if data is None:
         return None, False
-    dst = orm.findone(cn['dst'], table, {pkey: data[pkey]})
+    filter = {ref: data[ref]}
+    if sref and (not data[ref] or data[ref] == ''):
+        filter = {sref: data[sref]}
+    else:
+        filter = {ref: data[ref]}
+    dst = orm.findone(cn['dst'], table, filter)
     if dst: return dst, False
     dst = dict(data)
     for s in stub:
@@ -115,6 +120,8 @@ def fetch(table, data, o2m={}, m2o={}, m2m={},
 def instance():
     print("importing global instance structure")
     pkeys()
+    orm.delete(cn['dst'], 'users', {'type': 'GroupAnonymous'})
+    orm.delete(cn['dst'], 'users', {'type': 'GroupNonMember'})
     for s in orm.find(cn['src'], 'settings'):
         setting(s)
     for s in orm.find(cn['src'], 'issue_statuses'):
@@ -290,7 +297,8 @@ def user(src):
             'created_on': datetime.now(),
             'updated_on': datetime.now()
     })
-    return fetch('users', src, stub=['reminder_notification', 'mail'],
+    stub = ['reminder_notification', 'mail']
+    return fetch('users', src, stub=stub, ref='login', sref='id',
            m2o={
               'auth_source_id': [auth_source, 'auth_sources'],
            },
@@ -304,7 +312,7 @@ def user(src):
     )[ENTITY]
 
 def email_address(src):
-    return fetch('email_addresses', src, pkey='user_id')[ENTITY]
+    return fetch('email_addresses', src, pkey='user_id', ref='user_id')[ENTITY]
 
 def issue_priority(src):
     return fetch('enumerations', src,
@@ -657,7 +665,7 @@ def issue_relation(src):
     )[ENTITY]
 
 def setting(src):
-    return fetch('settings', src, pkey='name')[ENTITY]
+    return fetch('settings', src, ref='name')[ENTITY]
 
 def group(src):
     return fetch('users', src, stub=['mail', 'reminder_notification'])[ENTITY]
