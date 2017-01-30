@@ -735,7 +735,7 @@ def issue_template(src):
     )[ENTITY]
 
 def issue_template_setting(src):
-    return fetch('issue_templates_settings', src,
+    return fetch('issue_template_settings', src,
            m2o={
                'project_id': [project, 'projects']
            },
