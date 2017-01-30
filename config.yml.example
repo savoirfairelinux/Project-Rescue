@@ -19,6 +19,7 @@ dst:
     path: /var/lib/redmine/default/files/
 
 commit_at_each_entry: false
+also_import_children_projects: false
 
 relative:
     reference_table: issues

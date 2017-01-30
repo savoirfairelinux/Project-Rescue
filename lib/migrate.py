@@ -169,7 +169,6 @@ def pkeys():
 
 def project(src):
     o2m={
-       'projects': [project, 'parent_id'],
        'issues': [issue, 'project_id'],
        'enabled_modules': [enabled_module, 'project_id'],
        'time_entries': [time_entry, 'project_id'],
@@ -194,6 +193,8 @@ def project(src):
             tracker, 'trackers', 'project_id', 'tracker_id'
         ],
     }
+    if config['also_import_children_projects']:
+        o2m['projects'] = [project, 'parent_id']
     if 'redmine_backlogs' in config['plugins']:
         o2m['releases'] = [release, 'project_id']
         o2m['rb_project_settings'] = [rb_project_settings, 'project_id']

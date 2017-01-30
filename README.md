@@ -51,6 +51,9 @@ If `commit_at_each_entry` is set to true, each time an object is migrated,
 it will be instantatly commited into the db, if set to false, the changes
 will be commited only once everything migrated without any errors.
 
+If `also_import_children_projects` is set to `true`, if an imported project
+has childrens, they will be imported too, otherwise, they will not.
+
 Set your plugins to migrate their data. If you try to migrate data without
 setting the according plugin (or you set a plugin that is not installed at all)
 the migration process will likely to crash, but you have nothing to loose
@@ -85,6 +88,7 @@ dst:
     path: /var/lib/redmine/default/files/
 
 commit_at_each_entry: false
+also_import_children_projects: false
 
 relative:
     reference_table: issues
