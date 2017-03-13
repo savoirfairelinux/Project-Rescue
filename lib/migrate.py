@@ -289,17 +289,8 @@ def issue_status(src):
 def user(src):
     if src is None:
         return None
-    if src['mail']:
-        email_address({
-            'user_id': src['id'],
-            'address': src['mail'],
-            'is_default': True,
-            'notify': False,
-            'created_on': datetime.now(),
-            'updated_on': datetime.now()
-    })
     stub = ['reminder_notification', 'mail']
-    return fetch('users', src, stub=stub, ref='login', sref='id',
+    callback = fetch('users', src, stub=stub, ref='login', sref='id',
            m2o={
               'auth_source_id': [auth_source, 'auth_sources'],
            },
@@ -310,7 +301,17 @@ def user(src):
            m2m={
                'groups_users': [group, 'users', 'user_id', 'group_id'],
            },
-    )[ENTITY]
+    )
+    if callback[AFFECTED] and src['mail']:
+        email_address({
+            'user_id': callback[ENTITY]['id'],
+            'address': src['mail'],
+            'is_default': True,
+            'notify': False,
+            'created_on': datetime.now(),
+            'updated_on': datetime.now()
+        })
+    return callback[ENTITY]
 
 def email_address(src):
     return fetch('email_addresses', src, pkey='user_id', ref='user_id')[ENTITY]
