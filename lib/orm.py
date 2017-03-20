@@ -52,7 +52,7 @@ def fetchone(conn, query, params=[]):
     if conn[TYPE] == 'mysql':
         cur = conn[CONN].cursor(mysql.cursors.DictCursor)
     try:
-        cur.execute(query, params)
+        cur.execute(query+" LIMIT 1", params)
     except ProgrammingError as e:
         print("incorrectly formulated model definition :\n{0}".format(e))
         sys.exit(1)
