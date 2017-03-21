@@ -20,6 +20,7 @@ dst:
 
 commit_at_each_entry: false
 also_import_children_projects: false
+issue_relation_require_both_projects: true
 
 relative:
     reference_table: issues

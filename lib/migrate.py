@@ -659,6 +659,17 @@ def workflow(src):
     )[ENTITY]
 
 def issue_relation(src):
+    if config['issue_relation_require_both_projects']:
+        from_i = orm.findone(cn['src'], 'issues', {'id': src['issue_from_id']})
+        to_i = orm.findone(cn['src'], 'issues', {'id': src['issue_to_id']})
+        from_p = orm.findone(
+            cn['dst'], 'projects', {'id': from_i['project_id']}
+        )
+        to_p = orm.findone(
+            cn['dst'], 'projects', {'id': to_i['project_id']}
+        )
+        if not (from_p and to_p):
+            return None
     return fetch('issue_relations', src,
            m2o={
                'issue_from_id': [issue, 'issues'],

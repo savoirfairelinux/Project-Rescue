@@ -54,6 +54,11 @@ will be commited only once everything migrated without any errors.
 If `also_import_children_projects` is set to `true`, if an imported project
 has childrens, they will be imported too, otherwise, they will not.
 
+If `issue_relation_require_both_projects` is set to true, when there's relations
+between issues of different projets, it will require that the both projects
+are migrated in order to create the relation. This prevent from migrating
+projects that you didn't wanted to.
+
 Set your plugins to migrate their data. If you try to migrate data without
 setting the according plugin (or you set a plugin that is not installed at all)
 the migration process will likely to crash, but you have nothing to loose
@@ -89,6 +94,7 @@ dst:
 
 commit_at_each_entry: false
 also_import_children_projects: false
+issue_relation_require_both_projects: true
 
 relative:
     reference_table: issues
